@@ -1,0 +1,536 @@
+---
+title: "MElas Plots"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Load the R Packages 
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ggpubr)
+```
+
+#set working directory
+
+```{r}
+setwd("~/Desktop/NEWGEIaS_GI") #add your own directory
+```
+
+#load and clean data
+
+```{r}
+metadata<-read.csv("feature_table_ex_meta.csv") #load data
+condition<-as.factor(metadata$condition)
+days.post.infection<-as.factor(metadata$days.post.infection)
+
+metadata <- metadata[ -c(1:2) ] #keep condition, post infection days and digitized position
+
+```
+
+#Esophagus (1): Plot LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores
+
+```{r}
+data=read.table("1/GElaS.txt", header=TRUE) #load in Esophagus MElas data
+
+top<-top_n(data, 10, GElaS) #metabolites with top MElaS scores
+
+long_data <- pivot_longer(top, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+#plot LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Top MElas LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC")+ 
+  theme_minimal() 
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Esophagus (1): Plot LogFC between 12 and 89 days of the bottom 10 metabolites with the lowest elasticity scores
+
+```{r}
+bottom<-top_n(data, -10, GElaS) #metabolites with lowest MElaS scores
+
+bottom <- subset(bottom, log2FC_12 != 0) #remove log2FC_12 values that are 0
+bottom <- subset(bottom, log2FC_89 != 0) #remove log2FC_89 values that are 0
+
+random_rows <- bottom[sample(nrow(bottom), 10), ] #randomly sample 10
+
+long_data <- pivot_longer(random_rows, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+#plot LogFC between 12 and 89 days of the bottom 10 metabolites with the highest elasticity scores 
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Bottom MElaS LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC") +
+  theme_minimal()
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Esophagus (1): boxplot comparing peak areas of each top MElaS metabolites by post infection days and condition
+
+```{r}
+top_metabolite<-top$ID 
+column_list <- list()
+for (name in top_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+#boxplot comparing peak areas of each top MElaS metabolites by post infection days and condition. A box plot is produced for each metabolite 
+for (metabolite in top_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Top MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()  +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Esophagus (1): boxplot comparing peak areas of each bottom MElaS metabolites by post infection days and condition
+
+```{r}
+bottom_metabolite<-random_rows$ID
+column_list <- list()
+for (name in bottom_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+#boxplot comparing peak areas of each bottom MElaS metabolites by post infection days and condition. A box plot is produced for each metabolite 
+for (metabolite in bottom_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Bottom MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()   +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Stomach(2): Plot LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores
+
+```{r}
+data2=read.table("2/GElaS.txt", header=TRUE) #load in Stomach MElas data
+
+top<-top_n(data2, 10, GElaS) #metabolites with top MElaS scores
+
+long_data <- pivot_longer(top, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Top MElas LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC")+ 
+  theme_minimal() 
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Stomach(2): Plot LogFC between 12 and 89 days of the bottom 10 metabolites with the lowest elasticity scores
+
+```{r}
+bottom<-top_n(data2, -10, GElaS) #metabolites with lowest MElaS scores
+
+bottom <- subset(bottom, log2FC_12 != 0) #remove log2FC_12 values that are 0
+bottom <- subset(bottom, log2FC_89 != 0) #remove log2FC_89 values that are 0
+
+random_rows <- bottom[sample(nrow(bottom), 10), ] #randomly sample 10
+
+long_data <- pivot_longer(random_rows, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Bottom MElaS LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC") +
+  theme_minimal()
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Stomach(2): boxplot comparing peak areas of each top MElaS metabolites by post infection days and condition
+
+```{r}
+top_metabolite<-top$ID
+column_list <- list()
+for (name in top_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+for (metabolite in top_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Top MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()  +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Stomach(2): boxplot comparing peak areas of each bottom MElaS metabolites by post infection days and condition
+
+```{r}
+bottom_metabolite<-random_rows$ID
+column_list <- list()
+for (name in bottom_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with bottom MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+
+for (metabolite in bottom_metabolite) {
+  print(metabolite)
+  filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(filtered_new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(method = "kruskal.test", label = "p.format", vjust=1.5) +
+  labs(title=paste0("Peak Area of Bottom MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal() 
+  print(plot)
+}
+```
+
+#Small intestine(5): Plot LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores
+
+```{r}
+data5=read.table("5/GElaS.txt", header=TRUE) #load in Small intesinte MElas data
+
+top<-top_n(data5, 10, GElaS) #metabolites with top MElaS scores
+
+long_data <- pivot_longer(top, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Top MElas LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC")+ 
+  theme_minimal() 
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Small intestine(5): Plot LogFC between 12 and 89 days of the bottom 10 metabolites with the lowest elasticity scores
+
+```{r}
+bottom<-top_n(data5, -10, GElaS) #metabolites with lowest MElaS scores
+
+bottom <- subset(bottom, log2FC_12 != 0) #remove log2FC_12 values that are 0
+bottom <- subset(bottom, log2FC_89 != 0) #remove log2FC_89 values that are 0
+
+random_rows <- bottom[sample(nrow(bottom), 10), ] #randomly sample 10
+
+long_data <- pivot_longer(random_rows, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Bottom MElaS LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC") +
+  theme_minimal()
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Small intestine(5): boxplot comparing peak areas of each top MElaS metabolites by post infection days and condition
+
+```{r}
+top_metabolite<-top$ID
+column_list <- list()
+for (name in top_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+for (metabolite in top_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Top MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()  +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Small intestine(5): boxplot comparing peak areas of each bottom MElaS metabolites by post infection days and condition
+
+```{r}
+bottom_metabolite<-random_rows$ID
+column_list <- list()
+for (name in bottom_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+for (metabolite in bottom_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Bottom MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()   +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Cecum (10): Plot LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores
+
+```{r}
+data10=read.table("10/GElaS.txt", header=TRUE) #load in Cecum MElas data
+
+top<-top_n(data10, 10, GElaS) #metabolites with top MElaS scores
+
+long_data <- pivot_longer(top, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Top MElas LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC")+ 
+  theme_minimal() 
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Cecum (10): Plot LogFC between 12 and 89 days of the bottom 10 metabolites with the lowest elasticity scores
+
+```{r}
+bottom<-top_n(data10, -10, GElaS) #metabolites with lowest MElaS scores
+
+bottom <- subset(bottom, log2FC_12 != 0) #remove log2FC_12 values that are 0
+bottom <- subset(bottom, log2FC_89 != 0) #remove log2FC_89 values that are 0
+
+random_rows <- bottom[sample(nrow(bottom), 10), ] #randomly sample 10
+
+long_data <- pivot_longer(random_rows, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Bottom MElaS LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC") +
+  theme_minimal()
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Cecum (10): boxplot comparing peak areas of each top MElaS metabolites by post infection days and condition
+
+```{r}
+top_metabolite<-top$ID
+column_list <- list()
+for (name in top_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+for (metabolite in top_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Top MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()  +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Cecum (10): boxplot comparing peak areas of each bottom MElaS metabolites by post infection days and condition
+
+```{r}
+bottom_metabolite<-random_rows$ID
+column_list <- list()
+for (name in bottom_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+for (metabolite in bottom_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Bottom MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()   +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Large intestine(11): Plot LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores
+
+```{r}
+data11=read.table("11/GElaS.txt", header=TRUE) #load in Large intestine MElas data
+
+top<-top_n(data11, 10, GElaS) #metabolites with top MElaS scores
+
+long_data <- pivot_longer(top, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Top MElas LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC")+ 
+  theme_minimal() 
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Large intestine(11): Plot LogFC between 12 and 89 days of the bottom 10 metabolites with the lowest elasticity scores
+
+```{r}
+bottom<-top_n(data11, -10, GElaS) #metabolites with lowest MElaS scores
+
+bottom <- subset(bottom, log2FC_12 != 0) #remove log2FC_12 values that are 0
+bottom <- subset(bottom, log2FC_89 != 0) #remove log2FC_89 values that are 0
+
+random_rows <- bottom[sample(nrow(bottom), 10), ] #randomly sample 10
+
+long_data <- pivot_longer(random_rows, cols = c(log2FC_12, log2FC_89), 
+                          names_to = "Day", values_to = "infectuninfected")
+
+long_data$Day <- gsub("Day", "", long_data$Day)
+
+p=ggplot(long_data, aes(x = Day, y = infectuninfected, group = ID, color=ID)) +
+  geom_line(alpha = 0.6) +
+  geom_point() +
+  labs(title = "Bottom MElaS LogFC Between 12 and 89 Days",
+       x = "Post Infection (Days)", y = "LogFC") +
+  theme_minimal()
+p+labs(color="Metabolite") +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=20),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+```
+
+#Large intestine(11): boxplot comparing peak areas of each top MElaS metabolites by post infection days and condition
+
+```{r}
+top_metabolite<-top$ID
+column_list <- list()
+for (name in top_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+for (metabolite in top_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Top MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()  +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+#Large intestine(11): boxplot comparing peak areas of each bottom MElaS metabolites by post infection days and condition
+
+```{r}
+bottom_metabolite<-random_rows$ID
+column_list <- list()
+for (name in bottom_metabolite) {
+  column_list[[name]] <- metadata[[name]] 
+} #make a dataset that only includes metabolites with top MElas scores
+
+new_df <- as.data.frame(column_list)
+new_df<-cbind(new_df, metadata[c(1,2)]) #make new dataset with data set of top 10 metabolites and all samples
+
+for (metabolite in bottom_metabolite) {
+  print(metabolite)
+  #filtered_new_df <- new_df[new_df[[metabolite]] != 0, ]
+  plot<-ggplot(new_df, aes(x = as.factor(days.post.infection), y = .data[[metabolite]], fill = condition)) +
+  geom_boxplot() +   stat_compare_means(aes(group = condition), method = "kruskal.test", label = "p.format", vjust=4) + stat_compare_means(aes(group = days.post.infection), method = "kruskal.test", label = "p.format", vjust=1.5, label.x=1.4) +
+  labs(title=paste0("Peak Area of Bottom MElaS ", metabolite), x = "Post Infection (Days)", y = "Peak Area of Each Sample") + geom_jitter(position = position_jitterdodge(dodge.width = 0.8, jitter.width = 0.2),
+                  size = 1, alpha = 0.2) + theme_minimal()   +  
+		theme(axis.text=element_text(size=10),
+				axis.title=element_text(size=18),plot.title = element_text(size=22, hjust=0.5))+theme(legend.text = element_text(size = 10), legend.title = element_text(size = 15))
+  print(plot)
+}
+```
+
+
+

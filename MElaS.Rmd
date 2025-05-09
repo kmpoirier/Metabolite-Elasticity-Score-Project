@@ -1,0 +1,94 @@
+---
+title: "Metabolite Elascicity Score"
+output: html_notebook
+---
+
+#Load the R Packages 
+
+```{r}
+library("matrixStats") # version 0.58.0
+
+library("data.table") # version 1.14.3
+```
+
+#Setup the work path
+
+```{r}
+setwd("~/Desktop/NEWGEIaS") #choose your working directory
+rm(list=ls())
+```
+
+#Initialize variable
+
+```{r}
+#Tissue name
+TissTitle=c("1","2","3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13")
+
+#Comparison list
+comg=c("newratio_12","newratio_89")
+```
+
+#Input the expression dynamics and statistical significance information
+
+```{r}
+for(tissi in TissTitle){
+  for(tcomgi in comg){
+    tFCFDR=fread(paste0(tissi,"/",tcomgi,".txt"),sep = "\t",data.table = F)
+    rownames(tFCFDR)=tFCFDR$ID
+    assign(paste0(tissi,".",tcomgi,".FCFDR"),tFCFDR)
+  }
+}
+
+```
+
+#Calculate the Metabolic Elasticity Score (MElaS)
+
+```{r}
+
+for(tissi in TissTitle){
+  #Variable name for Comparison
+  tFN.name=paste0(tissi,".newratio_12.FCFDR")
+  tRF.name=paste0(tissi,".newratio_89.FCFDR")
+
+  #Create the data.frame to store the MElaS
+  tScoreMat=data.frame(ID=get(tFN.name)[,"ID"])
+  
+  #Gene List
+  tgid=tScoreMat$ID
+    
+  #Expression dynamics in 12 and 89 days
+  tFN.FC = get(tFN.name)[tgid,"log2FC"]
+  tRF.FC = get(tRF.name)[tgid,"log2FC"]
+    
+  #Sign of expression dynamics in 12 and 89 days
+  tMultilog2FCSign = -1*sign(tFN.FC * tRF.FC)
+  tMultilog2FCSign[tMultilog2FCSign <= 0] = 0
+    
+  #Absolute expression dynamics matrix
+  tAbslog2FC.Mat=data.frame(Abslog2FC.FN=abs(get(tFN.name)[tgid,"log2FC"]),
+                            Abslog2FC.RF=abs(get(tRF.name)[tgid,"log2FC"]),
+                            stringsAsFactors = F)
+    
+  #Calculate restoration extent of gene expression in 12 and 89 days
+  tlog2FC.Ratio=rowMins(as.matrix(tAbslog2FC.Mat))/rowMaxs(as.matrix(tAbslog2FC.Mat))
+  tlog2FC.Ratio[is.na(tlog2FC.Ratio)]=0
+    
+  #Calculate the weight for FDR (statistical significance)
+  tFDR.FN=log10(get(tFN.name)[tgid,"adj.P.Val"])
+  tFDR.RF=log10(get(tRF.name)[tgid,"adj.P.Val"])
+  tFDR.FN[tFDR.FN >= log10(0.05)]=tFDR.FN[tFDR.FN >= log10(0.05)]/(log10(0.05))
+  tFDR.FN[tFDR.FN < log10(0.05)]=1
+  tFDR.RF[tFDR.RF >= log10(0.05)]=tFDR.RF[tFDR.RF >= log10(0.05)]/(log10(0.05))
+  tFDR.RF[tFDR.RF < log10(0.05)]=1
+    
+  #Integrate the expression dynamics, statistical significance, and restoration extent to 
+  #calculate the MElaS
+  tAbslog2FC.FDRSum=(tAbslog2FC.Mat$Abslog2FC.FN*tFDR.FN+tAbslog2FC.Mat$Abslog2FC.RF*tFDR.RF)
+  tGElaS= tMultilog2FCSign*tlog2FC.Ratio*tAbslog2FC.FDRSum
+  tScoreMat[,paste0("MElaS")]=data.frame(tGElaS,stringsAsFactors = F)
+    
+  #Output the MElaS
+  fwrite(tScoreMat,file = paste0(tissi,"/MElaS.txt"),sep = "\t")
+  
+}
+```

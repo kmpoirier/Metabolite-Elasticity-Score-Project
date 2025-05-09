@@ -12,21 +12,23 @@
 - Each organ folder should have a newratio_12.txt and newratio_89.txt
 
 
-## MElaS.Rmd is a R notebook that uses the code from (Zhou, et.al (2022)) with some midifications that:
+## MElaS.Rmd is a R notebook that uses the code from (Zhou, et.al (2022)) with some modifications that:
 - Reads in both newratio_12.txt and newratio_89.txt for each organ
 - Calculate Elastic Score  
 - Produces MElaS.txt file for each organ containing MElaS of each metabolite
   
-### Paper and GitHub refrenced in this code:
+### Paper and GitHub referenced in this code:
 Zhou, Q., Yu, L., Cook, J.R., Qiang, L. & Sun, L. 2023, Cell Metabolism, 35, 1661-167.e6, doi: 10.1016/j.cmet.2023.08.001.
 https://github.com/zhouqz/GElaS
 
-## MElaSPlots.Rmd is a R notebbok that:
+## MElaSPlots.Rmd is a R notebook that:
 - Reads in MElaS.txt for each organ
 - Filters out the top and bottom MElaS score
 - Makes plots for LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores
 - Makes plots for LogFC between 12 and 89 days of the bottom 10 metabolites with the lowest elasticity scores
-- Makes boxplot comparing peak areas of each top/bottom MElaS metabolites by post infection days and condition. A box plot is produced for each metabolite 
+- Makes boxplot comparing peak areas of each top/bottom MElaS metabolites by post infection days and condition. A box plot is produced for each metabolite
+
+
 
 
 

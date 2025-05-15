@@ -1,6 +1,7 @@
 # Metabolite-Elasticity-Score-Project
 
-## cleanFeatureTable.py is a python file that:
+## cleanFeatureTable.py:
+- a python file
 - Reads featue_table_ex_meta.csv (metadata file including feature table)
 - Loops through each organ type and post infection days
     - Separates by each organ type 
@@ -12,7 +13,8 @@
 - Each organ folder should have a newratio_12.txt and newratio_89.txt
 
 
-## MElaS.Rmd is a R notebook that uses the code from (Zhou, et.al (2022)) with some modifications that:
+## MElaS.Rmd
+- R notebook that uses the code from (Zhou, et.al (2022)) with some modifications
 - Reads in both newratio_12.txt and newratio_89.txt for each organ
 - Calculate Elastic Score  
 - Produces MElaS.txt file for each organ containing MElaS of each metabolite
@@ -21,7 +23,8 @@
 Zhou, Q., Yu, L., Cook, J.R., Qiang, L. & Sun, L. 2023, Cell Metabolism, 35, 1661-167.e6, doi: 10.1016/j.cmet.2023.08.001.
 https://github.com/zhouqz/GElaS
 
-## MElaSPlots.Rmd is a R notebook that:
+## MElaSPlots.Rmd:
+- R notebook
 - Reads in MElaS.txt for each organ
 - Filters out the top and bottom MElaS score
 - Makes plots for LogFC between 12 and 89 days of the top 10 metabolites with the highest elasticity scores

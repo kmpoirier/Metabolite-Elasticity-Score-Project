@@ -44,8 +44,8 @@ for pos in positions:
         result_df = ratio_df.join(pval_df) #join p-value dataframe and logFC dataframe together
         result_df.index.name = 'ID'
         filename = f'{pos}/newratio_{t}.txt' #make a new file called newratio_12.txt and newratio_89.txt for each organ and save it to individual folders by organ
-        with open(filename, "w") as file: 
-            file.write(str(result_df))
+        result_df.to_csv(filename, sep='\t')
+
 
         print(f'df_{pos}_{t}.csv')
         
